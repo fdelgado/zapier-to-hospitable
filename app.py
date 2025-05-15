@@ -4,32 +4,49 @@ import os
 
 app = Flask(__name__)
 
-HOSPITABLE_API = "https://api.hospitable.com/v1/reservations"
-HOSPITABLE_TOKEN = os.getenv("HOSPITABLE_TOKEN")  # Securely inject this on Render
+HOSPITABLE_API_BASE = "https://api.hospitable.com/v1"
+HOSPITABLE_TOKEN = os.getenv("HOSPITABLE_TOKEN")
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
     data = request.json
+
+    conversation_id = data.get("conversation_id")
     message = data.get("message")
-    reservation_id = data.get("reservation_id")
+    msg_type = data.get("type", "reservation")  # default to 'reservation'
 
-    if not message or not reservation_id:
-        return jsonify({"error": "Missing message or reservation_id"}), 400
+    if not message or not conversation_id:
+        return jsonify({"error": "Missing 'message' or 'conversation_id'"}), 400
 
-    hospitable_url = f"{HOSPITABLE_API}/{reservation_id}/messages"
+    if msg_type not in ["reservation", "inquiry"]:
+        return jsonify({"error": "Invalid 'type'. Must be 'reservation' or 'inquiry'"}), 400
+
+    # Determine endpoint and payload
+    if msg_type == "reservation":
+        endpoint = f"/reservations/{conversation_id}/messages"
+        payload = {
+            "body": message,
+            "direction": "guest"
+        }
+    else:  # inquiry
+        endpoint = f"/inquiries/{conversation_id}/messages"
+        payload = {
+            "body": message  # no direction field
+        }
+
+    url = f"{HOSPITABLE_API_BASE}{endpoint}"
+
     headers = {
         "Authorization": f"Bearer {HOSPITABLE_TOKEN}",
         "Content-Type": "application/json"
     }
 
-    payload = {
-        "body": message,
-        "direction": "guest"
-    }
+    response = requests.post(url, headers=headers, json=payload)
 
-    response = requests.post(hospitable_url, json=payload, headers=headers)
-
-    if response.status_code >= 200 and response.status_code < 300:
-        return jsonify({"status": "success"}), 200
+    if 200 <= response.status_code < 300:
+        return jsonify({"status": "Message sent successfully"}), 200
     else:
-        return jsonify({"error": response.text}), response.status_code
+        return jsonify({
+            "error": response.text,
+            "status_code": response.status_code
+        }), response.status_code
