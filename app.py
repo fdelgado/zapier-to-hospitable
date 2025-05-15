@@ -13,7 +13,8 @@ def webhook():
 
     conversation_id = data.get("conversation_id")
     message = data.get("message")
-    msg_type = data.get("type", "reservation")  # default to 'reservation'
+    image_url = data.get("image_url")  # <-- NEW
+    msg_type = data.get("type", "reservation")
 
     if not message or not conversation_id:
         return jsonify({"error": "Missing 'message' or 'conversation_id'"}), 400
@@ -21,18 +22,16 @@ def webhook():
     if msg_type not in ["reservation", "inquiry"]:
         return jsonify({"error": "Invalid 'type'. Must be 'reservation' or 'inquiry'"}), 400
 
-    # Determine endpoint and payload
+    # Create base payload
+    payload = {"body": message}
+    if image_url:
+        payload["image_url"] = image_url
+
     if msg_type == "reservation":
         endpoint = f"/reservations/{conversation_id}/messages"
-        payload = {
-            "body": message,
-            "direction": "guest"
-        }
+        payload["direction"] = "guest"
     else:  # inquiry
         endpoint = f"/inquiries/{conversation_id}/messages"
-        payload = {
-            "body": message  # no direction field
-        }
 
     url = f"{HOSPITABLE_API_BASE}{endpoint}"
 
