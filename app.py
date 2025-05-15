@@ -4,7 +4,7 @@ import os
 
 app = Flask(__name__)
 
-HOSPITABLE_API_BASE = "https://api.hospitable.com/v1"
+HOSPITABLE_API_BASE = "https://public.api.hospitable.com/v2"
 HOSPITABLE_TOKEN = os.getenv("HOSPITABLE_TOKEN")
 
 @app.route("/webhook", methods=["POST"])
