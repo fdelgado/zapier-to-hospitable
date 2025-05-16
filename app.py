@@ -25,7 +25,7 @@ def webhook():
     # Create base payload
     payload = {"body": message}
     if image_url:
-        payload["image_url"] = image_url
+        payload["images"] = image_url
 
     if msg_type == "reservation":
         endpoint = f"/reservations/{conversation_id}/messages"
